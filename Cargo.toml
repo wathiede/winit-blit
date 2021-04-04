@@ -23,3 +23,23 @@ serial_test = "*"
 
 [target.'cfg(any(target_os = "linux", target_os = "dragonfly", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd"))'.dependencies]
 x11-dl = { version = "2.18.5", optional = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+web-sys = {version = "0.3.49", features = [
+  "Attr",
+  "CanvasRenderingContext2d",
+  "Document",
+  "DomStringMap",
+  "Element",
+  "HtmlCanvasElement",
+  "HtmlCollection",
+  "HtmlElement",
+  "ImageData",
+  "NamedNodeMap",
+] }
+wasm-bindgen = "0.2.72"
+log = "0.4.14"
+
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+winit = {version = "0.22.0", features = ["web-sys"] }
+console_log = "0.2"

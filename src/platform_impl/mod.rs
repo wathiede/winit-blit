@@ -13,3 +13,7 @@ mod platform_impl;
 ))]
 #[path = "linux/mod.rs"]
 mod platform_impl;
+
+#[cfg(target_arch = "wasm32")]
+#[path = "web/mod.rs"]
+mod platform_impl;

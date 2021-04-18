@@ -101,10 +101,10 @@ impl PixelBuffer {
             self.width,
             self.height,
         )
-        .map_err(|e| {
-            error!("failed to create image data {:?}", e);
-            io::Error::new(io::ErrorKind::InvalidData, "failed to create image data")
-        })?;
+            .map_err(|e| {
+                error!("failed to create image data {:?}", e);
+                io::Error::new(io::ErrorKind::InvalidData, "failed to create image data")
+            })?;
         self.ctx.put_image_data(&imagedata, 0., 0.).map_err(|e| {
             error!("failed to put image data {:?}", e);
             io::Error::new(io::ErrorKind::InvalidData, "failed to put image data")
@@ -134,13 +134,13 @@ impl PixelBuffer {
         self.bits_per_pixel() / 8
     }
     pub fn width(&self) -> u32 {
-        self.canvas.width()
+        self.width
     }
     pub fn row_len(&self) -> usize {
         self.width() as usize * self.bytes_per_pixel()
     }
     pub fn height(&self) -> u32 {
-        self.canvas.height()
+        self.height
     }
     pub fn row(&self, row: u32) -> Option<&[u8]> {
         todo!("wasm32 PixelBuffer::row {}", row)

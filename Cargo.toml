@@ -8,6 +8,10 @@ license = "Apache-2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+default = ["x11"]
+x11 = ["x11-dl"]
+
 [dependencies]
 raw-window-handle = "0.3"
 winapi = {version = "0.3", features = ["windef", "winuser", "wingdi"]}
@@ -16,3 +20,6 @@ rayon = {version = "1", optional = true}
 [dev-dependencies]
 winit = "0.22.0"
 serial_test = "*"
+
+[target.'cfg(any(target_os = "linux", target_os = "dragonfly", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd"))'.dependencies]
+x11-dl = { version = "2.18.5", optional = true }

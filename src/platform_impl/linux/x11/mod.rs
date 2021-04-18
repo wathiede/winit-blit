@@ -1,6 +1,5 @@
 use std::io;
-use std::os::raw::{c_char, c_int, c_uint, c_ulong, c_void};
-use std::ptr;
+use std::os::raw::{c_char, c_int, c_uint, c_ulong};
 
 use raw_window_handle::RawWindowHandle;
 use x11_dl::xlib::{Display, Visual, XGCValues, XImage, XWindowAttributes, Xlib, ZPixmap, GC};

@@ -32,6 +32,8 @@ pub type NativeFormat = crate::RGBA;
 const BYTES_PER_PIXEL: usize = 4;
 const BITS_PER_PIXEL: usize = BYTES_PER_PIXEL * 8;
 
+// TODO(wathiede): this implementation uses xlib XImage to put pixels into a window.  There is
+// likely faster ways using MIT-SHM.  Investigate that.
 impl PixelBuffer {
     pub unsafe fn new(
         width: u32,
@@ -39,18 +41,18 @@ impl PixelBuffer {
         format: PixelBufferFormatType,
         raw_window_handle: RawWindowHandle,
     ) -> Result<PixelBuffer, PixelBufferCreationError> {
-        // TODO(wathiede): validate format.
-        // TODO(wathiede): something with raw_window_handle.
+        if format != PixelBufferFormatType::RGBA {
+            return Err(PixelBufferCreationError::FormatNotSupported);
+        }
         let x = Xlib::open().expect("failed to open Xlib library");
         let (window, display) =
             get_window_and_display(raw_window_handle).expect("handle wasn't an XlibHandle");
         let pixels = vec![255; (width * height) as usize * BYTES_PER_PIXEL];
         let (depth, visual) = {
             let mut xwa: XWindowAttributes = std::mem::zeroed();
-            dbg!((x.XGetWindowAttributes)(display, window, &mut xwa));
+            (x.XGetWindowAttributes)(display, window, &mut xwa);
             (xwa.depth as c_uint, xwa.visual)
         };
-        dbg!(depth, visual);
         let gc = (x.XCreateGC)(display, window, 0, 0 as *mut XGCValues);
         let format = ZPixmap;
         let offset = 0;
@@ -72,11 +74,10 @@ impl PixelBuffer {
             bytes_per_line,
         );
         if ximage.is_null() {
-            // TODO(wathiede): better error handling.
+            // TODO(wathiede): better error handling here and throughout.
             panic!("Couldn't create XImage");
         }
         // TODO(wathiede): cleanup X resources when PixelBuffer is dropped.
-        dbg!(&width, &height, &depth, &ximage, &display, &window, &gc,);
         Ok(PixelBuffer {
             width,
             height,
@@ -96,8 +97,10 @@ impl PixelBuffer {
         src_pos: (u32, u32),
         dst_pos: (u32, u32),
         blit_size: (u32, u32),
-        handle: RawWindowHandle,
+        _handle: RawWindowHandle,
     ) -> io::Result<()> {
+        // TODO(wathiede): do we need to check the incoming handle matches our existing
+        // display/window/gc and rebuild ximage if it's changed?
         (self.xlib.XPutImage)(
             self.display,
             self.window,
@@ -136,11 +139,21 @@ impl PixelBuffer {
         self.height
     }
     pub fn row(&self, row: u32) -> Option<&[u8]> {
-        todo!("PixelBuffer::row")
+        let start = row as usize * self.row_len();
+        let end = (row + 1) as usize * self.row_len();
+        if (0..self.pixels.len()).contains(&end) {
+            return Some(&self.pixels[start..end]);
+        }
+        None
     }
 
     pub fn row_mut(&mut self, row: u32) -> Option<&mut [u8]> {
-        todo!("PixelBuffer::row_mut")
+        let start = row as usize * self.row_len();
+        let end = (row + 1) as usize * self.row_len();
+        if (0..self.pixels.len()).contains(&end) {
+            return Some(&mut self.pixels[start..end]);
+        }
+        None
     }
 
     pub fn rows<'a>(&'a self) -> impl ExactSizeIterator + DoubleEndedIterator<Item = &'a [u8]> {

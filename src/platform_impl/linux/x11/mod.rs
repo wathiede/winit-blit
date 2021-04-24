@@ -24,9 +24,9 @@ fn get_window_and_display(handle: RawWindowHandle) -> Option<(c_ulong, *mut Disp
     None
 }
 
-impl PixelBufferFormatSupported for crate::RGBA {}
-impl PixelBufferFormatSupported for crate::RGB {}
-pub type NativeFormat = crate::RGBA;
+impl PixelBufferFormatSupported for crate::BGRA {}
+impl PixelBufferFormatSupported for crate::BGR {}
+pub type NativeFormat = crate::BGRA;
 
 const BYTES_PER_PIXEL: usize = 4;
 const BITS_PER_PIXEL: usize = BYTES_PER_PIXEL * 8;
@@ -40,7 +40,7 @@ impl PixelBuffer {
         format: PixelBufferFormatType,
         raw_window_handle: RawWindowHandle,
     ) -> Result<PixelBuffer, PixelBufferCreationError> {
-        if format != PixelBufferFormatType::RGBA {
+        if format != PixelBufferFormatType::BGRA {
             return Err(PixelBufferCreationError::FormatNotSupported);
         }
         let x = Xlib::open().expect("failed to open Xlib library");

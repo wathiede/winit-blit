@@ -19,9 +19,6 @@ Building and running this example requires three things:
 1. You have something that can serve static HTTP content (`index.html` and
    `pkgs/*`).
 
-If you're using [nixpkgs](https://nixos.org/) you can use the ready made build
-environment provided in [`default.nix`](./default.nix).
-
 ## Build and Run Example
 
 1. Build with `wasm-pack build --debug --target web`

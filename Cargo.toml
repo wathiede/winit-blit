@@ -13,7 +13,7 @@ default = ["x11"]
 x11 = ["x11-dl"]
 
 [dependencies]
-raw-window-handle = "0.3"
+raw-window-handle = "0.6"
 winapi = {version = "0.3", features = ["windef", "winuser", "wingdi"]}
 rayon = {version = "1", optional = true}
 

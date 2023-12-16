@@ -1,14 +1,13 @@
 use std::io;
 
 use log::{debug, error};
-use raw_window_handle::{RawWindowHandle, WebWindowHandle};
+use raw_window_handle::{DisplayHandle, RawWindowHandle, WebWindowHandle, WindowHandle};
 use wasm_bindgen::{Clamped, JsCast};
-use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, ImageData};
+use web_sys::{CanvasRenderingContext2d, ImageData};
 
 use crate::{PixelBufferCreationError, PixelBufferFormatSupported, PixelBufferFormatType};
 
 pub struct PixelBuffer {
-    canvas: HtmlCanvasElement,
     ctx: CanvasRenderingContext2d,
     data: Clamped<Vec<u8>>,
     width: u32,
@@ -20,15 +19,16 @@ impl PixelBuffer {
         width: u32,
         height: u32,
         format: PixelBufferFormatType,
-        raw_window_handle: RawWindowHandle,
+        window_handle: WindowHandle,
+        _display_handle: DisplayHandle,
     ) -> Result<PixelBuffer, PixelBufferCreationError> {
         debug!(
             "wasm32 PixelBuffer::new {} {} {:?} {:?}",
-            width, height, format, raw_window_handle
+            width, height, format, window_handle
         );
 
         let raw_handle_id =
-            if let RawWindowHandle::Web(WebWindowHandle { id, .. }) = raw_window_handle {
+            if let RawWindowHandle::Web(WebWindowHandle { id, .. }) = window_handle.as_raw() {
                 id
             } else {
                 return Err(PixelBufferCreationError::FormatNotSupported);
@@ -87,7 +87,6 @@ impl PixelBuffer {
 
         let data = Clamped(vec![0; width as usize * height as usize * 4]);
         Ok(PixelBuffer {
-            canvas,
             ctx,
             data,
             width,
@@ -95,7 +94,7 @@ impl PixelBuffer {
         })
     }
 
-    pub unsafe fn blit(&self, handle: RawWindowHandle) -> io::Result<()> {
+    pub unsafe fn blit(&self, handle: WindowHandle) -> io::Result<()> {
         debug!("wasm32 PixelBuffer::blit {:?}", handle);
         let imagedata = ImageData::new_with_u8_clamped_array_and_sh(
             Clamped(&self.data.0),
@@ -118,7 +117,7 @@ impl PixelBuffer {
         src_pos: (u32, u32),
         dst_pos: (u32, u32),
         blit_size: (u32, u32),
-        handle: RawWindowHandle,
+        handle: WindowHandle,
     ) -> io::Result<()> {
         todo!(
             "wasm32 PixelBuffer::blit_rect {:?} {:?} {:?} {:?}",

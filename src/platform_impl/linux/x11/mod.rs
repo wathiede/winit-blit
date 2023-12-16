@@ -3,7 +3,7 @@ use std::{
     os::raw::{c_char, c_int, c_uint, c_ulong},
 };
 
-use raw_window_handle::{DisplayHandle, WindowHandle};
+use raw_window_handle::{DisplayHandle, RawDisplayHandle, RawWindowHandle, WindowHandle};
 use x11_dl::xlib::{Display, Visual, XGCValues, XImage, XWindowAttributes, Xlib, ZPixmap, GC};
 
 use crate::{PixelBufferCreationError, PixelBufferFormatSupported, PixelBufferFormatType};
@@ -23,9 +23,8 @@ fn get_window_and_display(
     window_handle: WindowHandle,
     display_handle: DisplayHandle,
 ) -> Option<(c_ulong, *mut Display)> {
-    if let raw_window_handle::RawWindowHandle::Xlib(x_window_handle) = window_handle.as_raw() {
-        if let raw_window_handle::RawDisplayHandle::Xlib(x_display_handle) = display_handle.as_raw()
-        {
+    if let RawWindowHandle::Xlib(x_window_handle) = window_handle.as_raw() {
+        if let RawDisplayHandle::Xlib(x_display_handle) = display_handle.as_raw() {
             return Some((
                 x_window_handle.window,
                 x_display_handle

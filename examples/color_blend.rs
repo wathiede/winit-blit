@@ -1,12 +1,13 @@
+use raw_window_handle::HasDisplayHandle;
 use winit::{
-    event::{ElementState, Event, KeyboardInput, WindowEvent},
+    event::{ElementState, Event, KeyEvent, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
 use winit_blit::{PixelBufferTyped, BGRA};
 
 fn main() {
-    let event_loop = EventLoop::new();
+    let event_loop = EventLoop::new().expect("failed to build new event loop");
 
     let window = WindowBuilder::new()
         .with_title("Software rendering example")
@@ -19,15 +20,16 @@ fn main() {
     let alpha = BGRA::new(0, 0, 0, 255);
     let mut blend_mode = BlendMode::Approx;
     println!("blend mode = {:?}", blend_mode);
-    event_loop.run(move |event, _, control_flow| {
-        // println!("{:?}", event);
-
-        match event {
+    // ControlFlow::Poll continuously runs the event loop, even if the OS hasn't
+    // dispatched any events. This is ideal for games and similar applications.
+    event_loop.set_control_flow(ControlFlow::Poll);
+    event_loop
+        .run(move |event, elwt| match event {
             Event::WindowEvent {
                 event:
                     WindowEvent::KeyboardInput {
-                        input:
-                            KeyboardInput {
+                        event:
+                            KeyEvent {
                                 state: ElementState::Pressed,
                                 ..
                             },
@@ -45,13 +47,26 @@ fn main() {
             }
             Event::WindowEvent {
                 event: WindowEvent::CloseRequested,
+                ..
+            } => {
+                println!("The close button was pressed; stopping");
+                elwt.exit();
+            }
+            Event::WindowEvent {
+                event: WindowEvent::RedrawRequested,
                 window_id,
-            } if window_id == window.id() => *control_flow = ControlFlow::Exit,
-            Event::RedrawRequested(window_id) => {
+                ..
+            } => {
                 if window_id == window.id() {
                     let (width, height): (u32, u32) = window.inner_size().into();
-                    let mut buffer =
-                        PixelBufferTyped::<BGRA>::new_supported(width, height, &window);
+                    let mut buffer = PixelBufferTyped::<BGRA>::new_supported(
+                        width,
+                        height,
+                        &window,
+                        &window
+                            .display_handle()
+                            .expect("couldn't get display for window"),
+                    );
                     let start = std::time::Instant::now();
 
                     let blend_fn = match blend_mode {
@@ -98,9 +113,9 @@ fn main() {
                     buffer.blit(&window).unwrap();
                 }
             }
-            _ => *control_flow = ControlFlow::Wait,
-        }
-    });
+            _ => (),
+        })
+        .expect("main event loop failed");
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

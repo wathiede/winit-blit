@@ -1,7 +1,9 @@
-use std::io;
-use std::os::raw::{c_char, c_int, c_uint, c_ulong};
+use std::{
+    io,
+    os::raw::{c_char, c_int, c_uint, c_ulong},
+};
 
-use raw_window_handle::RawWindowHandle;
+use raw_window_handle::{DisplayHandle, WindowHandle};
 use x11_dl::xlib::{Display, Visual, XGCValues, XImage, XWindowAttributes, Xlib, ZPixmap, GC};
 
 use crate::{PixelBufferCreationError, PixelBufferFormatSupported, PixelBufferFormatType};
@@ -17,9 +19,21 @@ pub struct PixelBuffer {
     gc: GC,
 }
 
-fn get_window_and_display(handle: RawWindowHandle) -> Option<(c_ulong, *mut Display)> {
-    if let raw_window_handle::RawWindowHandle::Xlib(x_handle) = handle {
-        return Some((x_handle.window, x_handle.display as *mut Display));
+fn get_window_and_display(
+    window_handle: WindowHandle,
+    display_handle: DisplayHandle,
+) -> Option<(c_ulong, *mut Display)> {
+    if let raw_window_handle::RawWindowHandle::Xlib(x_window_handle) = window_handle.as_raw() {
+        if let raw_window_handle::RawDisplayHandle::Xlib(x_display_handle) = display_handle.as_raw()
+        {
+            return Some((
+                x_window_handle.window,
+                x_display_handle
+                    .display
+                    .expect("display handle none")
+                    .as_ptr() as *mut Display,
+            ));
+        }
     }
     None
 }
@@ -38,14 +52,15 @@ impl PixelBuffer {
         width: u32,
         height: u32,
         format: PixelBufferFormatType,
-        raw_window_handle: RawWindowHandle,
+        window_handle: WindowHandle,
+        display_handle: DisplayHandle,
     ) -> Result<PixelBuffer, PixelBufferCreationError> {
         if format != PixelBufferFormatType::BGRA {
             return Err(PixelBufferCreationError::FormatNotSupported);
         }
         let x = Xlib::open().expect("failed to open Xlib library");
-        let (window, display) =
-            get_window_and_display(raw_window_handle).expect("handle wasn't an XlibHandle");
+        let (window, display) = get_window_and_display(window_handle, display_handle)
+            .expect("handle wasn't an XlibHandle");
         let pixels = vec![255; (width * height) as usize * BYTES_PER_PIXEL];
         let (depth, visual) = {
             let mut xwa: XWindowAttributes = std::mem::zeroed();
@@ -88,7 +103,7 @@ impl PixelBuffer {
             gc,
         })
     }
-    pub unsafe fn blit(&self, handle: RawWindowHandle) -> io::Result<()> {
+    pub unsafe fn blit(&self, handle: WindowHandle) -> io::Result<()> {
         self.blit_rect((0, 0), (0, 0), (self.width(), self.height()), handle)
     }
     pub unsafe fn blit_rect(
@@ -96,7 +111,7 @@ impl PixelBuffer {
         src_pos: (u32, u32),
         dst_pos: (u32, u32),
         blit_size: (u32, u32),
-        _handle: RawWindowHandle,
+        _handle: WindowHandle,
     ) -> io::Result<()> {
         // TODO(wathiede): do we need to check the incoming handle matches our existing
         // display/window/gc and rebuild ximage if it's changed?

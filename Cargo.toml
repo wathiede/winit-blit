@@ -18,7 +18,7 @@ winapi = {version = "0.3", features = ["windef", "winuser", "wingdi"]}
 rayon = {version = "1", optional = true}
 
 [dev-dependencies]
-winit = "0.22.0"
+winit = "0.29.0"
 serial_test = "*"
 
 [target.'cfg(any(target_os = "linux", target_os = "dragonfly", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd"))'.dependencies]
@@ -41,5 +41,5 @@ wasm-bindgen = "0.2.72"
 log = "0.4.14"
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
-winit = {version = "0.22.0", features = ["web-sys"] }
+winit = {version = "0.29.0" }
 console_log = "0.2"

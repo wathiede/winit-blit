@@ -1,7 +1,7 @@
 use std::io;
 
 use log::{debug, error};
-use raw_window_handle::{web::WebHandle, RawWindowHandle};
+use raw_window_handle::{RawWindowHandle, WebWindowHandle};
 use wasm_bindgen::{Clamped, JsCast};
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, ImageData};
 
@@ -27,11 +27,12 @@ impl PixelBuffer {
             width, height, format, raw_window_handle
         );
 
-        let raw_handle_id = if let RawWindowHandle::Web(WebHandle { id, .. }) = raw_window_handle {
-            id
-        } else {
-            return Err(PixelBufferCreationError::FormatNotSupported);
-        };
+        let raw_handle_id =
+            if let RawWindowHandle::Web(WebWindowHandle { id, .. }) = raw_window_handle {
+                id
+            } else {
+                return Err(PixelBufferCreationError::FormatNotSupported);
+            };
 
         let window = web_sys::window().ok_or_else(|| {
             error!("failed to find window");
@@ -53,7 +54,7 @@ impl PixelBuffer {
                     error!("Couldn't cast canvas {} to HtmlCanvasElement", idx);
                     PixelBufferCreationError::FormatNotSupported
                 })?;
-            // "raw-handle" is from the `raw_window_handle::web::WebHandle` documentation for
+            // "raw-handle" is from the `raw_window_handle::web::WebWindowHandle` documentation for
             // `id()`.
             // However, javascript access is camelCased according to
             // https://developer.mozilla.org/en-US/docs/Web/API/HTMLOrForeignElement/dataset
@@ -62,7 +63,7 @@ impl PixelBuffer {
                     == id
                         .parse()
                         // raw_window_handle should never be 0 for a valid canvas according to
-                        // https://docs.rs/raw-window-handle/0.3.3/raw_window_handle/web/struct.WebHandle.html
+                        // https://docs.rs/raw-window-handle/0.6/raw_window_handle/web/struct.WebWindowHandle.html
                         .unwrap_or(0)
                 {
                     canvas = Some(c);
@@ -101,10 +102,10 @@ impl PixelBuffer {
             self.width,
             self.height,
         )
-            .map_err(|e| {
-                error!("failed to create image data {:?}", e);
-                io::Error::new(io::ErrorKind::InvalidData, "failed to create image data")
-            })?;
+        .map_err(|e| {
+            error!("failed to create image data {:?}", e);
+            io::Error::new(io::ErrorKind::InvalidData, "failed to create image data")
+        })?;
         self.ctx.put_image_data(&imagedata, 0., 0.).map_err(|e| {
             error!("failed to put image data {:?}", e);
             io::Error::new(io::ErrorKind::InvalidData, "failed to put image data")

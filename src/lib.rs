@@ -1,5 +1,4 @@
 mod platform_impl;
-use raw_window_handle::HasRawWindowHandle;
 use std::{
     borrow::{Borrow, BorrowMut},
     fmt::Debug,
@@ -7,6 +6,7 @@ use std::{
     marker::PhantomData,
 };
 
+use raw_window_handle::{HasDisplayHandle, HasWindowHandle};
 #[cfg(feature = "rayon")]
 use rayon::prelude::*;
 
@@ -39,15 +39,24 @@ impl PixelBuffer {
     /// Initialize a new pixel buffer.
     ///
     /// Can return `Err` if the platform doesn't support the requested pixel buffer type.
-    pub fn new<H: HasRawWindowHandle>(
+    pub fn new<H: HasWindowHandle, D: HasDisplayHandle>(
         width: u32,
         height: u32,
         format: PixelBufferFormatType,
         window: &H,
+        display: &D,
     ) -> Result<PixelBuffer, PixelBufferCreationError> {
         unsafe {
-            platform_impl::PixelBuffer::new(width, height, format, window.raw_window_handle())
-                .map(|p| PixelBuffer { p })
+            platform_impl::PixelBuffer::new(
+                width,
+                height,
+                format,
+                window.window_handle().expect("failed to get window handle"),
+                display
+                    .display_handle()
+                    .expect("failed to get display handle"),
+            )
+            .map(|p| PixelBuffer { p })
         }
     }
 
@@ -56,8 +65,14 @@ impl PixelBuffer {
     /// # Panics
     /// The `window` passed to this function must be the same `window` passed to `new`. Failing to
     /// do so will result in a panic.
-    pub fn blit<H: HasRawWindowHandle>(&self, window: &H) -> io::Result<()> {
-        unsafe { self.p.blit(window.raw_window_handle()) }
+    pub fn blit<H: HasWindowHandle>(&self, window: &H) -> io::Result<()> {
+        unsafe {
+            self.p.blit(
+                window
+                    .window_handle()
+                    .expect("failed to get raw window handle"),
+            )
+        }
     }
 
     /// Blits a subsection of the pixel buffer's contents onto `window`.
@@ -65,7 +80,7 @@ impl PixelBuffer {
     /// # Panics
     /// The `window` passed to this function must be the same `window` passed to `new`. Failing to
     /// do so will result in a panic.
-    pub fn blit_rect<H: HasRawWindowHandle>(
+    pub fn blit_rect<H: HasWindowHandle>(
         &self,
         src_pos: (u32, u32),
         dst_pos: (u32, u32),
@@ -73,8 +88,14 @@ impl PixelBuffer {
         window: &H,
     ) -> io::Result<()> {
         unsafe {
-            self.p
-                .blit_rect(src_pos, dst_pos, blit_size, window.raw_window_handle())
+            self.p.blit_rect(
+                src_pos,
+                dst_pos,
+                blit_size,
+                window
+                    .window_handle()
+                    .expect("failed to get raw window handle"),
+            )
         }
     }
 
@@ -144,13 +165,14 @@ impl<P: PixelBufferFormat> PixelBufferTyped<P> {
     /// Initialize a new pixel buffer.
     ///
     /// Can return `Err` if the platform doesn't support the requested pixel buffer type.
-    pub fn new<H: HasRawWindowHandle>(
+    pub fn new<H: HasWindowHandle, D: HasDisplayHandle>(
         width: u32,
         height: u32,
         window: &H,
+        display: &D,
     ) -> Result<PixelBufferTyped<P>, PixelBufferCreationError> {
         Ok(PixelBufferTyped {
-            p: PixelBuffer::new(width, height, P::FORMAT_TYPE, window)?,
+            p: PixelBuffer::new(width, height, P::FORMAT_TYPE, window, display)?,
             _format: PhantomData,
         })
     }
@@ -159,15 +181,16 @@ impl<P: PixelBufferFormat> PixelBufferTyped<P> {
     ///
     /// This always works, since we've statically checked that the pixel format is supported by
     /// the platform.
-    pub fn new_supported<H: HasRawWindowHandle>(
+    pub fn new_supported<H: HasWindowHandle, D: HasDisplayHandle>(
         width: u32,
         height: u32,
         window: &H,
+        display: &D,
     ) -> PixelBufferTyped<P>
     where
         P: PixelBufferFormatSupported,
     {
-        Self::new(width, height, window).unwrap()
+        Self::new(width, height, window, display).unwrap()
     }
 
     /// Blits the pixel buffer's contents onto `window`.
@@ -175,7 +198,7 @@ impl<P: PixelBufferFormat> PixelBufferTyped<P> {
     /// # Panics
     /// The `window` passed to this function must be the same `window` passed to `new`. Failing to
     /// do so will result in a panic.
-    pub fn blit<H: HasRawWindowHandle>(&self, window: &H) -> io::Result<()> {
+    pub fn blit<H: HasWindowHandle>(&self, window: &H) -> io::Result<()> {
         self.p.blit(window)
     }
 
@@ -184,7 +207,7 @@ impl<P: PixelBufferFormat> PixelBufferTyped<P> {
     /// # Panics
     /// The `window` passed to this function must be the same `window` passed to `new`. Failing to
     /// do so will result in a panic.
-    pub fn blit_rect<H: HasRawWindowHandle>(
+    pub fn blit_rect<H: HasWindowHandle>(
         &self,
         src_pos: (u32, u32),
         dst_pos: (u32, u32),
